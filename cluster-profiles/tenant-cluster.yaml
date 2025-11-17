@@ -1,0 +1,9 @@
+apiVersion: lib.projectsveltos.io/v1beta1
+kind: SveltosCluster
+metadata:
+  labels:
+    env: prod
+  name: tenant
+  namespace: default
+spec:
+  kubeconfigKeyName: kubeconfig
