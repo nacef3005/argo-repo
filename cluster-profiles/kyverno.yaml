@@ -13,5 +13,5 @@ spec:
     chartName:        kyverno/kyverno
     chartVersion:     v3.3.3
     releaseName:      kyverno-latest
-    releaseNamespace: kyverno
+    releaseNamespace: mgmt
     helmChartAction:  Install
