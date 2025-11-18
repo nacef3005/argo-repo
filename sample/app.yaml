@@ -1,0 +1,133 @@
+# File 1: argocd-application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tracking-demo
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/your-repo
+    targetRevision: main
+    path: tracking-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+  syncPolicy:
+    automated:
+      prune: false  # Don't prune resources created by controllers
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+
+---
+# File 2: cronjob.yaml (in your git repo under tracking-demo/)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: report-generator
+  namespace: demo
+  labels:
+    app: report-generator
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    metadata:
+      labels:
+        app: report-generator
+    spec:
+      template:
+        metadata:
+          labels:
+            app: report-generator
+        spec:
+          serviceAccountName: report-generator
+          containers:
+          - name: generator
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Get the CronJob UID for ownerReference
+              CRONJOB_UID=$(kubectl get cronjob report-generator -n demo -o jsonpath='{.metadata.uid}')
+              TIMESTAMP=$(date +%s)
+              
+              # Create a ConfigMap with proper tracking
+              cat <<EOF | kubectl apply -f -
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: report-${TIMESTAMP}
+                namespace: demo
+                labels:
+                  app: report-generator
+                  generated-by: cronjob
+                  argocd.argoproj.io/instance: tracking-demo
+                annotations:
+                  argocd.argoproj.io/tracking-id: "tracking-demo:v1/ConfigMap:demo/report-${TIMESTAMP}"
+                ownerReferences:
+                - apiVersion: batch/v1
+                  kind: CronJob
+                  name: report-generator
+                  uid: ${CRONJOB_UID}
+              data:
+                timestamp: "${TIMESTAMP}"
+                report: "Generated at ${TIMESTAMP}"
+              EOF
+          restartPolicy: OnFailure
+
+---
+# File 3: rbac.yaml (in your git repo)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: report-generator
+  namespace: demo
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: report-generator
+  namespace: demo
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create", "get", "list", "patch", "update"]
+- apiGroups: ["batch"]
+  resources: ["cronjobs"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: report-generator
+  namespace: demo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: report-generator
+subjects:
+- kind: ServiceAccount
+  name: report-generator
+  namespace: demo
+
+---
+# File 4: argocd-cm-patch.yaml (apply this to ArgoCD namespace)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  # Enable both annotation and label-based tracking
+  application.resourceTrackingMethod: "annotation+label"
+  
+  # Add health check for ConfigMaps (optional)
+  resource.customizations.health.v1_ConfigMap: |
+    hs = {}
+    hs.status = "Healthy"
+    hs.message = "ConfigMap is ready"
+    return hs
