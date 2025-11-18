@@ -8,7 +8,7 @@ metadata:
   labels:
     app: report-generator
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "* * * * *"
   jobTemplate:
     metadata:
       labels:
