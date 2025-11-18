@@ -1,8 +1,9 @@
 ---
 apiVersion: config.projectsveltos.io/v1beta1
-kind: ClusterProfile
+kind: Profile
 metadata:
   name: kyverno
+  namespace: default
 spec:
   clusterSelector:
     matchLabels:
