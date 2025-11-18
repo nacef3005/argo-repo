@@ -2,7 +2,7 @@ apiVersion: lib.projectsveltos.io/v1beta1
 kind: SveltosCluster
 metadata:
   labels:
-    env: prod
+    env: dev
   name: tenant
   namespace: default
 spec:
