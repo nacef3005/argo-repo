@@ -114,20 +114,3 @@ subjects:
   name: report-generator
   namespace: demo
 
----
-# File 4: argocd-cm-patch.yaml (apply this to ArgoCD namespace)
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: argocd-cm
-  namespace: argocd
-data:
-  # Enable both annotation and label-based tracking
-  application.resourceTrackingMethod: "annotation+label"
-  
-  # Add health check for ConfigMaps (optional)
-  resource.customizations.health.v1_ConfigMap: |
-    hs = {}
-    hs.status = "Healthy"
-    hs.message = "ConfigMap is ready"
-    return hs
