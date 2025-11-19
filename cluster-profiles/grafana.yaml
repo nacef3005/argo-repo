@@ -1,0 +1,19 @@
+---
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: grafana
+  annotations:
+    argocd.argoproj.io/tracking-id: cluster-profiles:config.projectsveltos.io/ClusterProfile:/grafana
+spec:
+  clusterSelector:
+    matchLabels:
+      env: prod
+  helmCharts:
+  - repositoryURL:    https://grafana.github.io/helm-charts
+    repositoryName:   grafana
+    chartName:        grafana/grafana
+    chartVersion:     8.6.4
+    releaseName:      grafana
+    releaseNamespace: grafana
+    helmChartAction:  Install
